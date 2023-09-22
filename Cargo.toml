@@ -1,0 +1,20 @@
+[package]
+name = "event_flow"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.mark_event]
+path = "./mark_event"
+version = "0.1.0"
+
+[dependencies.core]
+path = "./core"
+version = "0.1.0"
+
+[workspace]
+members = [
+    ".",
+    "core",
+    "mark_event",
+    "example"
+]
