@@ -9,7 +9,6 @@ pub fn event_type(_args: TokenStream, input: TokenStream) -> TokenStream {
     let expanded = quote! {
         #input
         impl Event for #struct_ident {
-
             fn as_any(&self) -> &dyn std::any::Any {
                 self
             }
