@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 
-use event_flow::mark_event::MarkAsEvent;
+use event_flow::mark_event::event_type;
 use event_flow::core::prelude::*;
 
-#[derive(Debug, MarkAsEvent)]
+#[event_type]
 pub struct Kline {
     open: f32,
     close: f32,

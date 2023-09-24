@@ -33,6 +33,6 @@ impl SetEventSenderProxy for MarketMakerApp {
     }
 }
 
-impl PubEvent for MarketMakerApp {}
+impl AssociatedPubEvent for MarketMakerApp {}
 
 sub_event!(MarketMakerApp, [Kline]);
