@@ -18,6 +18,7 @@ impl MarketMakerApp {
 }
 
 impl HandleEvent for MarketMakerApp {
+    #[inline]
     fn handle_event(&mut self, event: Arc<dyn Event + Sync + Send>) {
         let n = Utc::now();
         if let Some(kline) = event.as_any().downcast_ref::<Kline>() {
@@ -33,6 +34,6 @@ impl SetEventSenderProxy for MarketMakerApp {
     }
 }
 
-impl PubEvent for MarketMakerApp {}
+impl AssociatedPubEvent for MarketMakerApp {}
 
 sub_event!(MarketMakerApp, [Kline]);

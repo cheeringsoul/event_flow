@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::thread;
 
 use crossbeam_channel::{bounded, Receiver, Select, Sender};
-use crate::event::{Event, HandleEvent, PubEvent, SubEvent};
+use crate::event::{Event, HandleEvent, AssociatedPubEvent, AssociatedSubEvent};
 
 
 pub trait SetEventSenderProxy {
@@ -36,12 +36,12 @@ impl EventSenderProxy {
 }
 
 
-struct Publisher<T: Publish + PubEvent + SetEventSenderProxy + Send + 'static> {
+struct Publisher<T: Publish + AssociatedPubEvent + SetEventSenderProxy + Send + 'static> {
     sender_registry: HashMap<TypeId, Vec<Sender<Arc<dyn Event + Sync + Send>>>>,
     app: T,
 }
 
-impl<T> AddSender for Publisher<T> where T: Publish + PubEvent + SetEventSenderProxy + Send + 'static {
+impl<T> AddSender for Publisher<T> where T: Publish + AssociatedPubEvent + SetEventSenderProxy + Send + 'static {
     fn add_senders(&mut self, event_type_id: TypeId, sender: Sender<Arc<dyn Event + Sync + Send>>) {
         if self.sender_registry.contains_key(&event_type_id) {
             let vec = self.sender_registry.get_mut(&event_type_id).unwrap();
@@ -52,7 +52,7 @@ impl<T> AddSender for Publisher<T> where T: Publish + PubEvent + SetEventSenderP
     }
 }
 
-impl<T> Publisher<T> where T: Publish + PubEvent + SetEventSenderProxy + Send + 'static {
+impl<T> Publisher<T> where T: Publish + AssociatedPubEvent + SetEventSenderProxy + Send + 'static {
     fn new(app: T) -> Self {
         Publisher {
             sender_registry: HashMap::new(),
@@ -67,18 +67,18 @@ impl<T> Publisher<T> where T: Publish + PubEvent + SetEventSenderProxy + Send + 
     }
 
     fn get_pub_event_ids(&self) -> Vec<TypeId> {
-        self.app.get_pub_event_ids()
+        self.app.get_associated_pub_event_ids()
     }
 }
 
-struct Subscriber<T: SubEvent + PubEvent + HandleEvent + SetEventSenderProxy + Send + 'static> {
+struct Subscriber<T: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + SetEventSenderProxy + Send + 'static> {
     readers: Vec<Receiver<Arc<dyn Event + Sync + Send>>>,
     senders: HashMap<TypeId, Sender<Arc<dyn Event + Sync + Send>>>,
     sender_registry: HashMap<TypeId, Vec<Sender<Arc<dyn Event + Sync + Send>>>>,
     app: T,
 }
 
-impl<T> AddSender for Subscriber<T> where T: SubEvent + PubEvent + HandleEvent + SetEventSenderProxy + Send + 'static {
+impl<T> AddSender for Subscriber<T> where T: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + SetEventSenderProxy + Send + 'static {
     fn add_senders(&mut self, event_type_id: TypeId, sender: Sender<Arc<dyn Event + Sync + Send>>) {
         if self.sender_registry.contains_key(&event_type_id) {
             let vec = self.sender_registry.get_mut(&event_type_id).unwrap();
@@ -89,11 +89,11 @@ impl<T> AddSender for Subscriber<T> where T: SubEvent + PubEvent + HandleEvent +
     }
 }
 
-impl<T> Subscriber<T> where T: SubEvent + PubEvent + HandleEvent + SetEventSenderProxy + Send + 'static {
+impl<T> Subscriber<T> where T: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + SetEventSenderProxy + Send + 'static {
     fn new(app: T) -> Self {
         let mut readers = Vec::new();
         let mut senders = HashMap::new();
-        let sub_event_ids = app.get_sub_event_ids();
+        let sub_event_ids = app.get_associated_sub_event_ids();
         for elem in sub_event_ids.iter() {
             let (sender, reader): (Sender<Arc<dyn Event + Sync + Send>>, Receiver<Arc<dyn Event + Sync + Send>>) = bounded(100);
             readers.push(reader);
@@ -122,20 +122,20 @@ impl<T> Subscriber<T> where T: SubEvent + PubEvent + HandleEvent + SetEventSende
         }
     }
 
-    fn get_sub_event_ids(&self) -> Vec<TypeId> {
-        self.app.get_sub_event_ids()
+    fn get_associated_sub_event_ids(&self) -> Vec<TypeId> {
+        self.app.get_associated_sub_event_ids()
     }
 
     fn get_pub_event_ids(&self) -> Vec<TypeId> {
-        self.app.get_pub_event_ids()
+        self.app.get_associated_pub_event_ids()
     }
 }
 
 
 pub struct AppEngine<T1, T2>
     where
-        T1: SubEvent + PubEvent + HandleEvent + SetEventSenderProxy + Send + 'static,
-        T2: Publish + PubEvent + SetEventSenderProxy + Send + 'static
+        T1: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + SetEventSenderProxy + Send + 'static,
+        T2: Publish + AssociatedPubEvent + SetEventSenderProxy + Send + 'static
 {
     subscribers: Vec<Subscriber<T1>>,
     publishers: Vec<Publisher<T2>>,
@@ -143,8 +143,8 @@ pub struct AppEngine<T1, T2>
 
 impl<T1, T2> AppEngine<T1, T2>
     where
-        T1: SubEvent + PubEvent + HandleEvent + SetEventSenderProxy + Send + 'static,
-        T2: Publish + PubEvent + SetEventSenderProxy + Send + 'static
+        T1: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + SetEventSenderProxy + Send + 'static,
+        T2: Publish + AssociatedPubEvent + SetEventSenderProxy + Send + 'static
 {
     pub fn new() -> Self {
         AppEngine {
@@ -180,7 +180,7 @@ impl<T1, T2> AppEngine<T1, T2>
             Self::set_sender(&sender_registry, elem, pub_event_ids);
         }
         for elem in self.subscribers.iter_mut() {
-            let sub_event_ids = elem.get_sub_event_ids();
+            let sub_event_ids = elem.get_associated_sub_event_ids();
             Self::set_sender(&sender_registry, elem, sub_event_ids);
         }
     }
