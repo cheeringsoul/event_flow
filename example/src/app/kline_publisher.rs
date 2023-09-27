@@ -6,20 +6,20 @@ use crate::app::event::Kline;
 use event_flow::core::prelude::*;
 
 pub struct KlinePublisher {
-    sender_proxy: Option<EventSenderProxy>,
+    sender_proxy: EventSenderProxy,
 }
 
 impl KlinePublisher {
     pub fn new() -> KlinePublisher {
         KlinePublisher {
-            sender_proxy: None
+            sender_proxy: EventSenderProxy::new()
         }
     }
 }
 
-impl SetEventSenderProxy for KlinePublisher {
-    fn set_event_sender_proxy(&mut self, proxy: EventSenderProxy) {
-        self.sender_proxy = Some(proxy);
+impl HasEventSenderProxy for KlinePublisher {
+    fn get_event_sender_proxy(&mut self) -> &mut EventSenderProxy{
+        &mut self.sender_proxy
     }
 }
 
@@ -27,7 +27,7 @@ impl Publish for KlinePublisher {
     fn publish_event(&mut self) {
         loop {
             let kline = Arc::new(Kline::new(1.1, 1.2, 1.0, 1.3));
-            self.sender_proxy.as_mut().unwrap().send_event(kline);
+            self.sender_proxy.send_event(kline);
             let duration = Duration::from_secs(1);
             thread::sleep(duration);
         }
