@@ -6,13 +6,13 @@ use crate::app::event::Kline;
 use event_flow::core::prelude::*;
 
 pub struct MarketMakerApp {
-    sender_proxy: Option<EventSenderProxy>,
+    sender_proxy: EventSenderProxy,
 }
 
 impl MarketMakerApp {
     pub fn new() -> MarketMakerApp {
         MarketMakerApp {
-            sender_proxy: None
+            sender_proxy: EventSenderProxy::new()
         }
     }
 }
@@ -28,9 +28,9 @@ impl HandleEvent for MarketMakerApp {
     }
 }
 
-impl SetEventSenderProxy for MarketMakerApp {
-    fn set_event_sender_proxy(&mut self, proxy: EventSenderProxy) {
-        self.sender_proxy = Some(proxy);
+impl HasEventSenderProxy for MarketMakerApp {
+    fn get_event_sender_proxy(&mut self) -> &mut EventSenderProxy {
+        &mut self.sender_proxy
     }
 }
 
