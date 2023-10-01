@@ -38,16 +38,17 @@ impl EventSenderProxy {
     }
 }
 
-struct Publisher<T: Publish + AssociatedPubEvent + HasEventSenderProxy + Send + 'static> {
+
+struct Publisher {
     sender_registry: SenderRegistry,
-    app: T,
+    app: Box<dyn PublishRunner>,
 }
 
-impl<T> Publisher<T> where T: Publish + AssociatedPubEvent + HasEventSenderProxy + Send + 'static {
-    fn new(app: T) -> Self {
+
+impl Publisher {
+    fn new(app: Box<dyn PublishRunner>) -> Self {
         Publisher {
-            sender_registry: HashMap::new(),
-            app,
+            sender_registry: HashMap::new(), app,
         }
     }
 
@@ -62,15 +63,19 @@ impl<T> Publisher<T> where T: Publish + AssociatedPubEvent + HasEventSenderProxy
     }
 }
 
-struct Subscriber<T: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + HasEventSenderProxy + Send + 'static> {
+pub trait SubscribeRunner: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + HasEventSenderProxy + Send {}
+
+pub trait PublishRunner: Publish + AssociatedPubEvent + HasEventSenderProxy + Send {}
+
+struct Subscriber {
     readers: Vec<Receiver<Arc<dyn Event + Sync + Send>>>,
     senders: HashMap<TypeId, Sender<Arc<dyn Event + Sync + Send>>>,
     sender_registry: HashMap<TypeId, Vec<Sender<Arc<dyn Event + Sync + Send>>>>,
-    app: T,
+    app: Box<dyn SubscribeRunner>,
 }
 
-impl<T> Subscriber<T> where T: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + HasEventSenderProxy + Send + 'static {
-    fn new(app: T) -> Self {
+impl Subscriber{
+    fn new(app: Box<dyn SubscribeRunner>) -> Self {
         let mut readers = Vec::new();
         let mut senders = HashMap::new();
         let sub_event_ids = app.get_associated_sub_event_ids();
@@ -112,20 +117,12 @@ impl<T> Subscriber<T> where T: AssociatedSubEvent + AssociatedPubEvent + HandleE
 }
 
 
-pub struct AppEngine<T1, T2>
-    where
-        T1: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + HasEventSenderProxy + Send + 'static,
-        T2: Publish + AssociatedPubEvent + HasEventSenderProxy + Send + 'static
-{
-    subscribers: Vec<Subscriber<T1>>,
-    publishers: Vec<Publisher<T2>>,
+pub struct AppEngine {
+    subscribers: Vec<Subscriber>,
+    publishers: Vec<Publisher>,
 }
 
-impl<T1, T2> AppEngine<T1, T2>
-    where
-        T1: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + HasEventSenderProxy + Send + 'static,
-        T2: Publish + AssociatedPubEvent + HasEventSenderProxy + Send + 'static
-{
+impl AppEngine {
     pub fn new() -> Self {
         AppEngine {
             subscribers: Vec::new(),
@@ -133,12 +130,12 @@ impl<T1, T2> AppEngine<T1, T2>
         }
     }
 
-    pub fn add_sub_app(&mut self, sub_app: T1) {
+    pub fn add_sub_app(&mut self, sub_app: Box<dyn SubscribeRunner>) {
         let subscriber = Subscriber::new(sub_app);
         self.subscribers.push(subscriber);
     }
 
-    pub fn add_pub_app(&mut self, pub_app: T2) {
+    pub fn add_pub_app(&mut self, pub_app: Box<dyn PublishRunner>) {
         let publisher = Publisher::new(pub_app);
         self.publishers.push(publisher);
     }

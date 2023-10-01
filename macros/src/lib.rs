@@ -72,6 +72,7 @@ pub fn pub_event_derive(input: TokenStream) -> TokenStream {
                 vec![#(std::any::TypeId::of::<#target>()),*]
             }
         }
+        impl PublishRunner for #name {}
     };
     expanded.into()
 }
@@ -96,6 +97,7 @@ pub fn sub_event_derive(input: TokenStream) -> TokenStream {
                 vec![#(std::any::TypeId::of::<#pub_target>()),*]
             }
         }
+        impl SubscribeRunner for #name {}
     };
     expanded.into()
 }
