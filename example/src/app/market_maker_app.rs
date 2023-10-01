@@ -3,7 +3,11 @@ use chrono::Utc;
 
 use crate::app::event::Kline;
 use event_flow::core::prelude::*;
+use event_flow::macros::SubApp;
 
+#[derive(SubApp)]
+#[sub_event(Kline)]
+#[pub_event(Kline)]
 pub struct MarketMakerApp {
     sender_proxy: EventSenderProxy,
 }
@@ -28,11 +32,10 @@ impl HandleEvent for MarketMakerApp {
         if let Some(kline) = event.as_any().downcast_ref::<Kline>() {
             let s = kline.timestamp;
             println!("MarketMakerApp: {}", n.signed_duration_since(s).num_nanoseconds().unwrap());
+            // self.sender_proxy.send_event(Price{price: kline.open});
         }
     }
 }
 
 
-impl AssociatedPubEvent for MarketMakerApp {}
-
-sub_event!(MarketMakerApp, [Kline]);
+// impl AssociatedPubEvent for MarketMakerApp {}

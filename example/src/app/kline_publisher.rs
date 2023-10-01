@@ -4,7 +4,10 @@ use std::time::Duration;
 
 use crate::app::event::Kline;
 use event_flow::core::prelude::*;
+use event_flow::macros::PubApp;
 
+#[derive(PubApp)]
+#[pub_event(Kline)]
 pub struct KlinePublisher {
     sender_proxy: EventSenderProxy,
 }
@@ -33,5 +36,3 @@ impl Publish for KlinePublisher {
         }
     }
 }
-
-pub_event!(KlinePublisher, [Kline]);

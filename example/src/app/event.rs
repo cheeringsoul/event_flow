@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 
-use event_flow::mark_event::event_type;
-use event_flow::core::prelude::*;
+use event_flow::prelude::*;
 
-#[event_type]
+
+#[derive(BuildEventType)]
 pub struct Kline {
     open: f32,
     close: f32,
@@ -22,4 +22,9 @@ impl Kline {
             timestamp: Utc::now(),
         }
     }
+}
+
+#[derive(BuildEventType)]
+pub struct Price {
+    pub price: f32,
 }
