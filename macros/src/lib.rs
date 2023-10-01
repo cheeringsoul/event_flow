@@ -11,8 +11,10 @@ use syn::{
 pub fn build_event_type(_item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(_item as DeriveInput);
     let name = &input.ident;
+    let generics = &input.generics;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let expanded = quote! {
-        impl Event for #name {
+        impl #impl_generics Event for #name #ty_generics #where_clause {
             fn as_any(&self) -> &dyn std::any::Any {
                 self
             }
@@ -58,6 +60,7 @@ fn get_event(ast: &DeriveInput, name: &str) -> Vec<Ident> {
     }
     target
 }
+
 #[proc_macro_derive(PubApp, attributes(pub_event))]
 pub fn pub_event_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();

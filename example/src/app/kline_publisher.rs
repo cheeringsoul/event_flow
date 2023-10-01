@@ -29,7 +29,7 @@ impl HasEventSenderProxy for KlinePublisher {
 impl Publish for KlinePublisher {
     fn publish_event(&mut self) {
         loop {
-            let kline = Arc::new(Kline::new(1.1, 1.2, 1.0, 1.3));
+            let kline = Arc::new(Kline::new("BTCUSDT".to_string(), 1.1, 1.2, 1.0, 1.3));
             self.sender_proxy.send_event(kline);
             let duration = Duration::from_secs(1);
             thread::sleep(duration);
