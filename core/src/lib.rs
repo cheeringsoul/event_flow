@@ -6,8 +6,8 @@ pub mod prelude;
 macro_rules! sub_event {
     ($struct_name:ident, [$($event_type:ty),*]) => {
         impl AssociatedSubEvent for $struct_name {
-            fn get_associated_sub_event_ids(&self) -> Vec<TypeId> {
-                let result: Vec<TypeId> = vec![$(TypeId::of::<$event_type>()),*];
+            fn get_associated_sub_event_ids(&self) -> Vec<std::any::TypeId> {
+                let result: Vec<std::any::TypeId> = vec![$(std::any::TypeId::of::<$event_type>()),*];
                 result
             }
         }
@@ -18,8 +18,8 @@ macro_rules! sub_event {
 macro_rules! pub_event {
     ($struct_name:ident, [$($event_type:ty),*]) => {
         impl AssociatedPubEvent for $struct_name {
-            fn get_associated_pub_event_ids(&self) -> Vec<TypeId> {
-                let result: Vec<TypeId> = vec![$(TypeId::of::<$event_type>()),*];
+            fn get_associated_pub_event_ids(&self) -> Vec<std::any::TypeId> {
+                let result: Vec<std::any::TypeId> = vec![$(std::any::TypeId::of::<$event_type>()),*];
                 result
             }
         }

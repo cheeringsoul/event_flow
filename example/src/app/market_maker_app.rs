@@ -1,4 +1,3 @@
-use std::any::TypeId;
 use std::sync::Arc;
 use chrono::Utc;
 
@@ -17,6 +16,12 @@ impl MarketMakerApp {
     }
 }
 
+impl HasEventSenderProxy for MarketMakerApp {
+    fn get_event_sender_proxy(&mut self) -> &mut EventSenderProxy {
+        &mut self.sender_proxy
+    }
+}
+
 impl HandleEvent for MarketMakerApp {
     fn handle_event(&mut self, event: Arc<dyn Event + Sync + Send>) {
         let n = Utc::now();
@@ -27,11 +32,6 @@ impl HandleEvent for MarketMakerApp {
     }
 }
 
-impl HasEventSenderProxy for MarketMakerApp {
-    fn get_event_sender_proxy(&mut self) -> &mut EventSenderProxy {
-        &mut self.sender_proxy
-    }
-}
 
 impl AssociatedPubEvent for MarketMakerApp {}
 
