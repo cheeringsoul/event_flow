@@ -23,8 +23,3 @@ impl Kline {
         }
     }
 }
-
-#[derive(BuildEventType)]
-pub struct Price {
-    pub price: f32,
-}
