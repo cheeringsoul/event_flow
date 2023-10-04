@@ -38,17 +38,21 @@ impl EventSenderProxy {
     }
 }
 
+pub trait SubApp: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + HasEventSenderProxy + Send {}
 
-struct Publisher {
+pub trait PubApp: Publish + AssociatedPubEvent + HasEventSenderProxy + Send {}
+
+struct PublisherRunner {
     sender_registry: SenderRegistry,
-    app: Box<dyn PublishRunner>,
+    app: Box<dyn PubApp>,
 }
 
 
-impl Publisher {
-    fn new(app: Box<dyn PublishRunner>) -> Self {
-        Publisher {
-            sender_registry: HashMap::new(), app,
+impl PublisherRunner {
+    fn new(app: Box<dyn PubApp>) -> Self {
+        PublisherRunner {
+            sender_registry: HashMap::new(),
+            app,
         }
     }
 
@@ -63,19 +67,15 @@ impl Publisher {
     }
 }
 
-pub trait SubscribeRunner: AssociatedSubEvent + AssociatedPubEvent + HandleEvent + HasEventSenderProxy + Send {}
-
-pub trait PublishRunner: Publish + AssociatedPubEvent + HasEventSenderProxy + Send {}
-
-struct Subscriber {
+struct SubscriberRunner {
     readers: Vec<Receiver<Arc<dyn Event + Sync + Send>>>,
     senders: HashMap<TypeId, Sender<Arc<dyn Event + Sync + Send>>>,
     sender_registry: HashMap<TypeId, Vec<Sender<Arc<dyn Event + Sync + Send>>>>,
-    app: Box<dyn SubscribeRunner>,
+    app: Box<dyn SubApp>,
 }
 
-impl Subscriber{
-    fn new(app: Box<dyn SubscribeRunner>) -> Self {
+impl SubscriberRunner {
+    fn new(app: Box<dyn SubApp>) -> Self {
         let mut readers = Vec::new();
         let mut senders = HashMap::new();
         let sub_event_ids = app.get_associated_sub_event_ids();
@@ -84,7 +84,7 @@ impl Subscriber{
             readers.push(reader);
             senders.insert(*elem, sender);
         }
-        Subscriber { readers, senders, sender_registry: HashMap::new(), app }
+        SubscriberRunner { readers, senders, sender_registry: HashMap::new(), app }
     }
 
     fn run(&mut self) {
@@ -118,8 +118,8 @@ impl Subscriber{
 
 
 pub struct AppEngine {
-    subscribers: Vec<Subscriber>,
-    publishers: Vec<Publisher>,
+    subscribers: Vec<SubscriberRunner>,
+    publishers: Vec<PublisherRunner>,
 }
 
 impl AppEngine {
@@ -130,13 +130,13 @@ impl AppEngine {
         }
     }
 
-    pub fn add_sub_app(&mut self, sub_app: Box<dyn SubscribeRunner>) {
-        let subscriber = Subscriber::new(sub_app);
+    pub fn add_sub_app(&mut self, sub_app: Box<dyn SubApp>) {
+        let subscriber = SubscriberRunner::new(sub_app);
         self.subscribers.push(subscriber);
     }
 
-    pub fn add_pub_app(&mut self, pub_app: Box<dyn PublishRunner>) {
-        let publisher = Publisher::new(pub_app);
+    pub fn add_pub_app(&mut self, pub_app: Box<dyn PubApp>) {
+        let publisher = PublisherRunner::new(pub_app);
         self.publishers.push(publisher);
     }
 
