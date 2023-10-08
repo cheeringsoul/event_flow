@@ -1,10 +1,7 @@
-use std::io::Stderr;
 use chrono::{DateTime, Utc};
+use event_flow::macros::BuildEvent;
 
-use event_flow::prelude::*;
-
-
-#[derive(BuildEventType)]
+#[derive(BuildEvent)]
 pub struct Kline{
     pub symbol: String,
     pub open: f32,
@@ -27,7 +24,7 @@ impl Kline {
     }
 }
 
-#[derive(BuildEventType)]
+#[derive(BuildEvent)]
 pub struct Price {
     pub symbol: String,
     pub price: f32,

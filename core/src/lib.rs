@@ -1,6 +1,5 @@
 pub mod event;
 pub mod app;
-pub mod prelude;
 
 #[macro_export]
 macro_rules! sub_event {

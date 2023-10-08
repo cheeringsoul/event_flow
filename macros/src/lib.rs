@@ -7,14 +7,14 @@ use syn::{
 };
 
 
-#[proc_macro_derive(BuildEventType)]
+#[proc_macro_derive(BuildEvent)]
 pub fn build_event_type(_item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(_item as DeriveInput);
     let name = &input.ident;
     let generics = &input.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let expanded = quote! {
-        impl #impl_generics Event for #name #ty_generics #where_clause {
+        impl #impl_generics event_flow::core::event::Event for #name #ty_generics #where_clause {
             fn as_any(&self) -> &dyn std::any::Any {
                 self
             }
@@ -61,23 +61,23 @@ fn get_event(ast: &DeriveInput, name: &str) -> Vec<Ident> {
     target
 }
 
-#[proc_macro_derive(PubApp, attributes(pub_event))]
+#[proc_macro_derive(BuildPubApp, attributes(pub_event))]
 pub fn pub_event_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let target: Vec<Ident> = get_event(&ast, "pub_event");
     let name = ast.ident;
     let expanded = quote! {
-        impl AssociatedPubEvent for #name {
+        impl event_flow::core::event::AssociatedPubEvent for #name {
             fn get_associated_pub_event_ids(&self) -> Vec<std::any::TypeId> {
                 vec![#(std::any::TypeId::of::<#target>()),*]
             }
         }
-        impl PublishRunner for #name {}
+        impl event_flow::core::app::PubApp for #name {}
     };
     expanded.into()
 }
 
-#[proc_macro_derive(SubApp, attributes(sub_event, pub_event))]
+#[proc_macro_derive(BuildSubApp, attributes(sub_event, pub_event))]
 pub fn sub_event_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let sub_target: Vec<Ident> = get_event(&ast, "sub_event");
@@ -87,17 +87,17 @@ pub fn sub_event_derive(input: TokenStream) -> TokenStream {
     let pub_target: Vec<Ident> = get_event(&ast, "pub_event");
     let name = ast.ident;
     let expanded = quote! {
-        impl AssociatedSubEvent for #name {
+        impl event_flow::core::event::AssociatedSubEvent for #name {
             fn get_associated_sub_event_ids(&self) -> Vec<std::any::TypeId> {
                 vec![#(std::any::TypeId::of::<#sub_target>()),*]
             }
         }
-        impl AssociatedPubEvent for #name {
+        impl event_flow::core::event::AssociatedPubEvent for #name {
             fn get_associated_pub_event_ids(&self) -> Vec<std::any::TypeId> {
                 vec![#(std::any::TypeId::of::<#pub_target>()),*]
             }
         }
-        impl SubscribeRunner for #name {}
+        impl event_flow::core::app::SubApp for #name {}
     };
     expanded.into()
 }

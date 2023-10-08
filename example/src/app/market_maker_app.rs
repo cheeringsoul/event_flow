@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use chrono::Utc;
+use event_flow::app::{EventSenderProxy, HasEventSenderProxy};
+use event_flow::event::{Event, HandleEvent};
 
 use crate::app::event::{Kline, Price};
-use event_flow::core::prelude::*;
-use event_flow::macros::SubApp;
+use event_flow::macros::BuildSubApp;
 
-#[derive(SubApp)]
+#[derive(BuildSubApp)]
 #[sub_event(Kline)]
 #[pub_event(Price)]
 pub struct MarketMakerApp {

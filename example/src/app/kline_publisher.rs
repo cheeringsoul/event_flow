@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use event_flow::app::{EventSenderProxy, HasEventSenderProxy, Publish};
 
 use crate::app::event::Kline;
-use event_flow::core::prelude::*;
-use event_flow::macros::PubApp;
+use event_flow::macros::BuildPubApp;
 
-#[derive(PubApp)]
+#[derive(BuildPubApp)]
 #[pub_event(Kline)]
 pub struct KlinePublisher {
     sender_proxy: EventSenderProxy,
