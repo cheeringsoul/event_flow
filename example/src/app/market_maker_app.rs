@@ -1,10 +1,13 @@
-use std::any::TypeId;
 use std::sync::Arc;
 use chrono::Utc;
 
-use crate::app::event::Kline;
+use crate::app::event::{Kline, Price};
 use event_flow::core::prelude::*;
+use event_flow::macros::SubApp;
 
+#[derive(SubApp)]
+#[sub_event(Kline)]
+#[pub_event(Price)]
 pub struct MarketMakerApp {
     sender_proxy: EventSenderProxy,
 }
@@ -17,6 +20,12 @@ impl MarketMakerApp {
     }
 }
 
+impl HasEventSenderProxy for MarketMakerApp {
+    fn get_event_sender_proxy(&mut self) -> &mut EventSenderProxy {
+        &mut self.sender_proxy
+    }
+}
+
 impl HandleEvent for MarketMakerApp {
     #[inline]
     fn handle_event(&mut self, event: Arc<dyn Event + Sync + Send>) {
@@ -24,16 +33,7 @@ impl HandleEvent for MarketMakerApp {
         if let Some(kline) = event.as_any().downcast_ref::<Kline>() {
             let s = kline.timestamp;
             println!("MarketMakerApp: {}", n.signed_duration_since(s).num_nanoseconds().unwrap());
+            self.sender_proxy.send_event(Arc::new(Price::new(kline.symbol.clone(), kline.close)));
         }
     }
 }
-
-impl HasEventSenderProxy for MarketMakerApp {
-    fn get_event_sender_proxy(&mut self) -> &mut EventSenderProxy {
-        &mut self.sender_proxy
-    }
-}
-
-impl AssociatedPubEvent for MarketMakerApp {}
-
-sub_event!(MarketMakerApp, [Kline]);

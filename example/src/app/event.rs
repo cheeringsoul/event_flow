@@ -1,25 +1,43 @@
+use std::io::Stderr;
 use chrono::{DateTime, Utc};
 
-use event_flow::mark_event::event_type;
-use event_flow::core::prelude::*;
+use event_flow::prelude::*;
 
-#[event_type]
-pub struct Kline {
-    open: f32,
-    close: f32,
-    low: f32,
-    high: f32,
+
+#[derive(BuildEventType)]
+pub struct Kline{
+    pub symbol: String,
+    pub open: f32,
+    pub close: f32,
+    pub low: f32,
+    pub high: f32,
     pub timestamp: DateTime<Utc>,
 }
 
 impl Kline {
-    pub fn new(open: f32, close: f32, low: f32, high: f32) -> Self {
+    pub fn new(symbol: String, open: f32, close: f32, low: f32, high: f32) -> Self {
         Kline {
+            symbol,
             open,
             close,
             low,
             high,
             timestamp: Utc::now(),
+        }
+    }
+}
+
+#[derive(BuildEventType)]
+pub struct Price {
+    pub symbol: String,
+    pub price: f32,
+}
+
+impl Price {
+    pub fn new(symbol: String, price: f32) -> Self {
+        Price {
+            symbol,
+            price,
         }
     }
 }
