@@ -4,9 +4,9 @@ use event_flow::app::{EventSenderProxy, HasEventSenderProxy};
 use event_flow::event::{Event, HandleEvent};
 
 use crate::app::event::{Kline, Price};
-use event_flow::macros::BuildSubApp;
+use event_flow::macros::SubApp;
 
-#[derive(BuildSubApp)]
+#[derive(SubApp)]
 #[sub_event(Kline)]
 #[pub_event(Price)]
 pub struct MarketMakerApp {

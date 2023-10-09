@@ -1,2 +1,2 @@
-pub use crate::macros::BuildEvent;
+pub use crate::macros::EventType;
 pub use crate::event::Event;

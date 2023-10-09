@@ -157,8 +157,8 @@ impl AppEngine {
             Self::set_sender(&sub_registry, &mut (elem.sender_registry), pub_event_ids);
         }
         for elem in self.subscribers.iter_mut() {
-            let sub_event_ids = elem.get_sub_event_ids();
-            Self::set_sender(&sub_registry, &mut (elem.sender_registry), sub_event_ids);
+            let pub_event_ids = elem.get_pub_event_ids();
+            Self::set_sender(&sub_registry, &mut (elem.sender_registry), pub_event_ids);
         }
     }
 

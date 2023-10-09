@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
-use event_flow::macros::BuildEvent;
+use event_flow::macros::EventType;
 
-#[derive(BuildEvent)]
+#[derive(EventType)]
 pub struct Kline{
     pub symbol: String,
     pub open: f32,
@@ -24,7 +24,7 @@ impl Kline {
     }
 }
 
-#[derive(BuildEvent)]
+#[derive(EventType)]
 pub struct Price {
     pub symbol: String,
     pub price: f32,

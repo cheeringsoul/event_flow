@@ -7,7 +7,7 @@ use syn::{
 };
 
 
-#[proc_macro_derive(BuildEvent)]
+#[proc_macro_derive(EventType)]
 pub fn build_event_type(_item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(_item as DeriveInput);
     let name = &input.ident;
@@ -61,8 +61,8 @@ fn get_event(ast: &DeriveInput, name: &str) -> Vec<Ident> {
     target
 }
 
-#[proc_macro_derive(BuildPubApp, attributes(pub_event))]
-pub fn pub_event_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(PubApp, attributes(pub_event))]
+pub fn pub_app_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let target: Vec<Ident> = get_event(&ast, "pub_event");
     let name = ast.ident;
@@ -77,8 +77,8 @@ pub fn pub_event_derive(input: TokenStream) -> TokenStream {
     expanded.into()
 }
 
-#[proc_macro_derive(BuildSubApp, attributes(sub_event, pub_event))]
-pub fn sub_event_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(SubApp, attributes(sub_event, pub_event))]
+pub fn sub_app_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let sub_target: Vec<Ident> = get_event(&ast, "sub_event");
     if sub_target.is_empty() {
