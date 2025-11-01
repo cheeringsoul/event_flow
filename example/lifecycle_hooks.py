@@ -135,7 +135,7 @@ class DatabaseApp(Application):
         await self.db.execute("VACUUM ANALYZE")
 
 
-async def main():
+def main():
     """
     Main function to demonstrate lifecycle hooks
     """
@@ -157,35 +157,8 @@ async def main():
         await asyncio.sleep(0.1)
         print("[ENGINE] Engine shutdown complete!")
 
-    # Create a task to run the engine
-    engine_task = asyncio.create_task(app.start())
-
-    # Wait for initialization to complete
-    await asyncio.sleep(1)
-
-    # Publish some events
-    print("[MAIN] Publishing events...\n")
-    await engine.pub_event(DataEvent("data-1"))
-    await asyncio.sleep(0.5)
-    await engine.pub_event(DataEvent("data-2"))
-    await asyncio.sleep(0.5)
-    await engine.pub_event(DataEvent("data-3"))
-
-    # Let the application run for a bit
-    await asyncio.sleep(3)
-
-    # Trigger shutdown
-    print("\n[MAIN] Initiating shutdown...\n")
-    engine_task.cancel()
-
-    try:
-        await engine_task
-    except asyncio.CancelledError:
-        pass
-
-    # Call the exit hook manually since we're not using engine.start()
-    await app.exit()
+    engine.start()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

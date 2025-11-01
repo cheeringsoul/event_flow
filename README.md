@@ -175,6 +175,32 @@ event = MessageEvent(source="telegram", data={"text": "Hello"})
 print(event.source)  # "telegram"
 ```
 
+### Publishing Events
+
+Events can be published in two ways:
+
+1. **From the AppEngine** (typically from external sources):
+```python
+engine = AppEngine()
+await engine.pub_event(UserCreatedEvent({"user_id": 123}))
+```
+
+2. **From within Application or SubApplication** (for internal event flow):
+```python
+class MyApp(Application):
+
+    @on_event(UserCreatedEvent)
+    async def handle_user_created(self, events: list[UserCreatedEvent]):
+        for event in events:
+            # Process the user creation
+            # Then publish a follow-up event
+            await self.engine.pub_event(
+                WelcomeEmailEvent({"email": event.data["email"]})
+            )
+```
+
+Any Application or SubApplication instance has access to `self.engine`, allowing you to publish events from within event handlers, timers, or background tasks.
+
 ### Event Handlers
 
 Event handlers are methods that respond to specific event types. There are three ways to declare handlers:

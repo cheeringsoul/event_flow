@@ -5,7 +5,6 @@ This example demonstrates how to use the @timer decorator to create
 periodic tasks that run at specified intervals.
 """
 
-import asyncio
 from datetime import datetime
 from event_flow.core.application import Application, AppEngine
 from event_flow.core.decorators import timer
@@ -74,36 +73,8 @@ class ScheduledApp(Application):
         print("\nWatching tasks for 15 seconds...\n")
 
 
-async def main():
-    """
-    Main function to demonstrate timer-based tasks
-    """
-    # Create and configure the engine
+if __name__ == "__main__":
     engine = AppEngine()
     app = ScheduledApp()
     engine.add_app(app)
-
-    # Create a task to run the engine
-    engine_task = asyncio.create_task(app.start())
-
-    # Let it run for 15 seconds to see the timers in action
-    await asyncio.sleep(15)
-
-    # Cancel the engine task
-    engine_task.cancel()
-
-    try:
-        await engine_task
-    except asyncio.CancelledError:
-        pass
-
-    print("\n" + "=" * 60)
-    print("Timer Tasks Summary:")
-    print(f"  - Data syncs: {app.sync_count}")
-    print(f"  - Cache cleanups: {app.cache_cleanups}")
-    print(f"  - Health checks: {app.health_checks}")
-    print("=" * 60)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    engine.start()

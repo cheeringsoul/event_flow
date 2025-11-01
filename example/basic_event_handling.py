@@ -121,6 +121,7 @@ async def main():
     print("\n" + "=" * 60)
     print("Example completed!")
     print("=" * 60)
+    await engine.run()
 
 
 if __name__ == "__main__":
