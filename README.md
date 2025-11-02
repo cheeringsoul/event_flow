@@ -38,32 +38,46 @@ uv add event-flow
 ```python
 from event_flow.core.application import Application, AppEngine
 from event_flow.core.event import Event
-from event_flow.core.decorators import on_event
 
-# Define your custom event
-class UserCreatedEvent(Event):
+# Define your custom events
+class OrderPlacedEvent(Event):
     pass
 
-# Create an application
-class MyApp(Application):
+class TradeEvent(Event):
+    pass
 
-    # Method 1: Using @on_event decorator
-    @on_event(UserCreatedEvent)
-    async def handle_user_created(self, events: list[UserCreatedEvent]):
+# Create applications with event handlers
+class OrderProcessorApp(Application):
+
+    # Using naming convention (method starts with 'on_')
+    async def on_orders(self, events: list[OrderPlacedEvent]):
+        """Process orders and publish trade events"""
         for event in events:
-            print(f"User created: {event.data}")
+            print(f"Processing order: {event.data}")
+            # Publish a new event from within the handler
+            await self.engine.pub_event(TradeEvent({
+                "symbol": event.data["symbol"],
+                "price": event.data["price"]
+            }))
 
-    # Method 2: Using naming convention (method starts with 'on_' and parameter type hint is list[Event])
-    async def on_user_login(self, events: list[UserCreatedEvent]):
+class TradeProcessorApp(Application):
+
+    async def on_trade(self, events: list[TradeEvent]):
+        """Handle trade events"""
         for event in events:
-            print(f"Processing login: {event.data}")
+            print(f"Processing trade: {event.data}")
 
-# Initialize and start the engine
+# Initialize the engine and add applications
 engine = AppEngine()
-engine.add_app(MyApp())
+engine.add_app(OrderProcessorApp(), TradeProcessorApp())
 
-# Publish events
-await engine.pub_event(UserCreatedEvent({"user_id": 123, "email": "user@example.com"}))
+# Use @engine.before_start to publish initial events
+@engine.before_start
+async def publish_events():
+    await engine.pub_event(OrderPlacedEvent({
+        "symbol": "BTCUSDT",
+        "price": "120000"
+    }))
 
 # Start the engine
 engine.start()
@@ -95,24 +109,40 @@ class ScheduledApp(Application):
 Run long-running tasks in the background:
 
 ```python
-from event_flow.core.application import Application
+import asyncio
+from collections import deque
+from event_flow.core.application import Application, AppEngine
 from event_flow.core.decorators import task
 
 class WorkerApp(Application):
 
-    @task
-    async def process_queue(self):
-        """Runs continuously in the background"""
-        while True:
-            # Process items from queue
-            await asyncio.sleep(1)
+    def __init__(self):
+        super().__init__()
+        self.queue = deque()
 
     @task
-    def blocking_task(self):
-        """Sync function automatically runs in thread pool"""
+    async def process_queue(self):
+        """Async background task that continuously processes items"""
         while True:
-            # Long-running blocking operation
-            time.sleep(1)
+            if self.queue:
+                item = self.queue.popleft()
+                print(f"Processing: {item}")
+                await asyncio.sleep(1)
+            else:
+                await asyncio.sleep(0.1)
+
+    @task
+    def blocking_monitor(self):
+        """Sync function automatically runs in thread pool"""
+        import time
+        while True:
+            print(f"Queue size: {len(self.queue)}")
+            time.sleep(3)
+
+# Start the application
+engine = AppEngine()
+engine.add_app(WorkerApp())
+engine.start()
 ```
 
 ### Lifecycle Hooks
@@ -120,6 +150,9 @@ class WorkerApp(Application):
 Control application behavior during startup and shutdown:
 
 ```python
+import asyncio
+from event_flow.core.application import Application, AppEngine
+
 class DatabaseApp(Application):
 
     async def before_start(self):
@@ -131,6 +164,20 @@ class DatabaseApp(Application):
         """Called when the application is shutting down"""
         print("Closing database connection...")
         await self.db.close()
+
+# You can also add engine-level hooks
+engine = AppEngine()
+engine.add_app(DatabaseApp())
+
+@engine.before_start
+async def engine_setup():
+    print("Engine starting...")
+
+@engine.exit
+async def engine_cleanup():
+    print("Engine shutting down...")
+
+engine.start()
 ```
 
 ### Multi-Application Architecture
@@ -138,16 +185,49 @@ class DatabaseApp(Application):
 Manage multiple applications with a single engine:
 
 ```python
-from event_flow.core.application import AppEngine
+from event_flow.core.application import Application, AppEngine
+from event_flow.core.event import Event
+from event_flow.core.decorators import on_event, timer
 
-# Create multiple applications
-api_app = APIApp()
-worker_app = WorkerApp()
-monitor_app = MonitorApp()
+class OrderPlacedEvent(Event):
+    pass
 
-# Add all apps to the engine
+class OrderProcessedEvent(Event):
+    pass
+
+# API application receives orders
+class APIApp(Application):
+
+    @timer(interval=3, run_at_once=True)
+    async def simulate_incoming_orders(self):
+        """Simulate receiving orders from external API"""
+        await self.engine.pub_event(OrderPlacedEvent({
+            "order_id": "ORD-001",
+            "product": "Product-1"
+        }))
+
+# Order processor handles the orders
+class OrderProcessorApp(Application):
+
+    @on_event(OrderPlacedEvent)
+    async def process_orders(self, events: list[OrderPlacedEvent]):
+        """Process orders and emit completion events"""
+        for event in events:
+            print(f"Processing: {event.data}")
+            await self.engine.pub_event(OrderProcessedEvent(event.data))
+
+# Notification app sends notifications
+class NotificationApp(Application):
+
+    @on_event(OrderProcessedEvent)
+    async def notify(self, events: list[OrderProcessedEvent]):
+        """Send notifications for processed orders"""
+        for event in events:
+            print(f"Sending notification for: {event.data}")
+
+# Create engine and add all apps
 engine = AppEngine()
-engine.add_app(api_app, worker_app, monitor_app)
+engine.add_app(APIApp(), OrderProcessorApp(), NotificationApp())
 
 # All apps share the same event bus
 engine.start()
@@ -368,13 +448,53 @@ def handle_event(self, events: list[MyEvent]):
 
 ## Examples
 
-Check out the examples in the repository for more use cases:
+Check out the comprehensive examples in the `example/` directory:
 
-- REST API integration with event processing
-- Database event sourcing
-- Message queue integration
-- Microservices communication
-- Real-time monitoring systems
+### Running Examples
+
+```bash
+# Run examples directly
+python example/basic_event_handling.py
+python example/timer_tasks.py
+python example/background_tasks.py
+python example/lifecycle_hooks.py
+python example/multi_app.py
+```
+
+### Available Examples
+
+**`basic_event_handling.py`** - Event handling fundamentals
+- Different ways to declare event handlers (naming convention)
+- Publishing events from within Application instances using `self.engine.pub_event()`
+- Event chaining (OrderPlacedEvent → TradeEvent)
+- Using `@engine.before_start` decorator
+
+**`timer_tasks.py`** - Periodic scheduled tasks
+- Using `@timer` decorator with different intervals
+- `run_at_once` parameter for immediate execution
+- Both async and sync timer functions
+
+**`background_tasks.py`** - Long-running background workers
+- Using `@task` decorator for continuous tasks
+- Queue processing patterns
+- Async and sync background tasks
+- Multiple concurrent workers
+
+**`lifecycle_hooks.py`** - Resource management
+- `before_start()` hook for initialization
+- `exit()` hook for cleanup
+- Both application-level and engine-level hooks
+- Database connection management example
+
+**`multi_app.py`** - Multi-application architecture
+- Multiple apps sharing a single event bus
+- Inter-application communication via events
+- Complete microservices-style system with:
+  - API app (receives orders)
+  - Order processor (processes orders)
+  - Inventory management (tracks stock)
+  - Notification service (sends alerts)
+  - Monitoring service (health checks)
 
 ## Contributing
 

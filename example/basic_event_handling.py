@@ -27,10 +27,15 @@ class OrderPlacedEvent(Event):
     pass
 
 
-class EventProcessorApp(Application):
+class Trade(Event):
+    """Event representing a trade"""
+    pass
+
+
+class EventProcessorApp1(Application):
 
     # Using naming convention (method starts with 'on_')
-    async def on_socket_data(self, events: List[SocketDataEvent]):
+    async def on_socket_data(self, events: List[SocketDataEvent]):  # noqa
         """
         Handle socket data events using explicit decorator.
 
@@ -47,6 +52,16 @@ class EventProcessorApp(Application):
         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
         for each in events:
             print(f"[{timestamp}] [Processor] Processed OrderPlacedEvent {each}")
+            await self.engine.pub_event(Trade({"symbol": each.data["symbol"], "price": each.data["price"]}))
+
+
+class EventProcessorApp2(Application):
+
+    async def on_trade(self, events: List[Trade]):  # noqa
+        """Handle trade events"""
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        for each in events:
+            print(f"[{timestamp}] [Processor2] Processed Trade {each}")
 
 
 def main():
@@ -57,9 +72,10 @@ def main():
     engine = AppEngine()
 
     # Add applications
-    processor_app = EventProcessorApp()
+    processor_app = EventProcessorApp1()
+    trade_app = EventProcessorApp2()
 
-    engine.add_app(processor_app)
+    engine.add_app(processor_app, trade_app)
 
     @engine.before_start
     async def simulate_external_events():

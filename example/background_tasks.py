@@ -103,7 +103,7 @@ class WorkerApp(Application):
             print(f"[{timestamp}] [SyncMonitor]   - Processed: {self.processed_items}")
 
 
-async def main():
+def main():
     """
     Main function to demonstrate background tasks
     """
@@ -111,28 +111,8 @@ async def main():
     engine = AppEngine()
     app = WorkerApp()
     engine.add_app(app)
-
-    # Create a task to run the engine
-    engine_task = asyncio.create_task(app.start())
-
-    # Let it run for 12 seconds to see the background tasks in action
-    await asyncio.sleep(12)
-
-    # Cancel the engine task
-    engine_task.cancel()
-
-    try:
-        await engine_task
-    except asyncio.CancelledError:
-        pass
-
-    print("\n" + "=" * 60)
-    print("Background Tasks Summary:")
-    print(f"  - Total items processed: {app.processed_items}")
-    print(f"  - Items remaining in queue: {len(app.queue)}")
-    print(f"  - Monitoring reports: {app.monitoring_reports}")
-    print("=" * 60)
+    engine.start()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
