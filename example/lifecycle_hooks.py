@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime
 from event_flow.core.application import Application, AppEngine
 from event_flow.core.event import Event
-from event_flow.core.decorators import on_event, timer
+from event_flow.core.decorators import on_event, schedule
 
 
 # Simulated database connection class
@@ -127,9 +127,9 @@ class DatabaseApp(Application):
 
             self.events_processed += 1
 
-    @timer(interval=2, run_at_once=True)
+    @schedule(interval=2, run_at_once=True)
     async def periodic_task(self):
-        """A timer task that also uses the database"""
+        """A schedule task that also uses the database"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"[{timestamp}] Running periodic database maintenance...")
         await self.db.execute("VACUUM ANALYZE")

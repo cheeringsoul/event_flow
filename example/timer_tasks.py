@@ -1,19 +1,16 @@
 """
-Timer-Based Tasks Example
+Schedule Tasks Example
 
-This example demonstrates how to use the @timer decorator to create
+This example demonstrates how to use the @schedule decorator to create
 periodic tasks that run at specified intervals.
 """
 
 from datetime import datetime
 from event_flow.core.application import Application, AppEngine
-from event_flow.core.decorators import timer
+from event_flow.core.decorators import schedule
 
 
 class ScheduledApp(Application):
-    """
-    Application with various timer-based scheduled tasks
-    """
 
     def __init__(self):
         super().__init__()
@@ -21,7 +18,7 @@ class ScheduledApp(Application):
         self.cache_cleanups = 0
         self.health_checks = 0
 
-    @timer(interval=2, run_at_once=True)
+    @schedule(interval=2, run_at_once=True)
     async def sync_data(self):
         """
         Runs every 2 seconds and executes immediately on startup.
@@ -33,7 +30,7 @@ class ScheduledApp(Application):
         timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"[{timestamp}] Syncing data... (run #{self.sync_count})")
 
-    @timer(interval=5, run_at_once=False)
+    @schedule(interval=5, run_at_once=False)
     async def cleanup_cache(self):
         """
         Runs every 5 seconds, waits for the first interval before executing.
@@ -45,10 +42,10 @@ class ScheduledApp(Application):
         timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"[{timestamp}] Cleaning up cache... (cleanup #{self.cache_cleanups})")
 
-    @timer(interval=3, run_at_once=True)
+    @schedule(interval=3, run_at_once=True)
     def blocking_health_check(self):
         """
-        Synchronous timer function that runs every 3 seconds.
+        Synchronous function that runs every 3 seconds.
 
         The framework automatically converts sync functions to async
         by running them in a thread pool, so blocking operations
@@ -64,7 +61,7 @@ class ScheduledApp(Application):
     async def before_start(self):
         """Hook that runs before the application starts"""
         print("=" * 60)
-        print("Timer-Based Tasks Example")
+        print("Schedule Tasks Example")
         print("=" * 60)
         print("\nStarting scheduled tasks...")
         print("- sync_data: runs every 2 seconds (immediate)")

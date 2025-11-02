@@ -89,16 +89,17 @@ Execute tasks periodically with the `@timer` decorator:
 
 ```python
 from event_flow.core.application import Application
-from event_flow.core.decorators import timer
+from event_flow.core.decorators import schedule
+
 
 class ScheduledApp(Application):
 
-    @timer(interval=60, run_at_once=True)
+    @schedule(interval=60, run_at_once=True)
     async def sync_data(self):
         """Runs every 60 seconds, executes immediately on startup"""
         print("Syncing data...")
 
-    @timer(interval=300, run_at_once=False)
+    @schedule(interval=300, run_at_once=False)
     async def cleanup_cache(self):
         """Runs every 5 minutes, waits for first interval before executing"""
         print("Cleaning up cache...")
@@ -187,24 +188,28 @@ Manage multiple applications with a single engine:
 ```python
 from event_flow.core.application import Application, AppEngine
 from event_flow.core.event import Event
-from event_flow.core.decorators import on_event, timer
+from event_flow.core.decorators import on_event, schedule
+
 
 class OrderPlacedEvent(Event):
     pass
 
+
 class OrderProcessedEvent(Event):
     pass
+
 
 # API application receives orders
 class APIApp(Application):
 
-    @timer(interval=3, run_at_once=True)
+    @schedule(interval=3, run_at_once=True)
     async def simulate_incoming_orders(self):
         """Simulate receiving orders from external API"""
         await self.engine.pub_event(OrderPlacedEvent({
             "order_id": "ORD-001",
             "product": "Product-1"
         }))
+
 
 # Order processor handles the orders
 class OrderProcessorApp(Application):
@@ -216,6 +221,7 @@ class OrderProcessorApp(Application):
             print(f"Processing: {event.data}")
             await self.engine.pub_event(OrderProcessedEvent(event.data))
 
+
 # Notification app sends notifications
 class NotificationApp(Application):
 
@@ -224,6 +230,7 @@ class NotificationApp(Application):
         """Send notifications for processed orders"""
         for event in events:
             print(f"Sending notification for: {event.data}")
+
 
 # Create engine and add all apps
 engine = AppEngine()

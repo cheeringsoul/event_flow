@@ -1,4 +1,4 @@
-"""Decorators for defining event handlers, timers, and background tasks.
+"""Decorators for defining event handlers, schedule task, and background tasks.
 
 This module provides decorators to mark methods in Application classes for
 special behavior in the event flow framework.
@@ -15,8 +15,8 @@ from event_flow.core.event import Event
 
 
 @dataclass
-class TimerDetail:
-    """Configuration details for a timer-based task.
+class ScheduleDetail:
+    """Configuration details for a schedule task.
 
     Attributes:
         interval: Time in seconds between task executions
@@ -26,8 +26,8 @@ class TimerDetail:
     run_at_once: bool = True
 
 
-def timer(interval: Union[float, int], run_at_once=True):
-    """Decorator to mark a method as a periodic timer task.
+def schedule(interval: Union[float, int], run_at_once=True):
+    """Decorator to mark a method as a periodic schedule task.
 
     The decorated method will be executed repeatedly at the specified interval.
     Can be used with both sync and async functions.
@@ -37,13 +37,13 @@ def timer(interval: Union[float, int], run_at_once=True):
         run_at_once: If True, run immediately on startup before waiting for interval
 
     Returns:
-        Decorated function that will be executed on a timer
+        Decorated function that will be executed on as schedule task
 
     Raises:
         TypeError: If interval is not a numeric type
 
     Example:
-        @timer(interval=5.0)
+        @schedule(interval=5.0)
         async def check_status(self):
             print("Checking status every 5 seconds")
     """
@@ -59,7 +59,7 @@ def timer(interval: Union[float, int], run_at_once=True):
             @wraps(func)
             async def wrapped_func(*args, **kwargs):
                 return await asyncio.to_thread(func, *args, **kwargs)
-        wrapped_func.__timer__ = TimerDetail(interval, run_at_once)
+        wrapped_func.__schedule__ = ScheduleDetail(interval, run_at_once)
         return wrapped_func
 
     return new_func

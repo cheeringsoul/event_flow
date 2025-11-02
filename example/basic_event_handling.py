@@ -89,7 +89,6 @@ def main():
         - Database triggers
         - etc.
         """
-        await asyncio.sleep(3)  # Wait for the app to start
 
         print("\n" + "=" * 60)
         print("Simulating external events...")

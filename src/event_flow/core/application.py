@@ -22,8 +22,8 @@ from event_flow.core.tools import ensure_async
 
 
 @dataclasses.dataclass
-class TimerDetail:
-    """Configuration for timer-based tasks.
+class ScheduleDetail:
+    """Configuration for schedule tasks.
 
     Attributes:
         interval: Seconds between executions
@@ -37,7 +37,7 @@ class Registry(metaclass=ABCMeta):
     """Abstract base class for registries that store method metadata.
 
     Registries are used by the metaclass to track which methods should be
-    called for timers, events, and other special behaviors.
+    called for schedule task, events, and other special behaviors.
     """
     @abstractmethod
     def register(self, *args, **kwargs): ...
@@ -49,16 +49,16 @@ class Registry(metaclass=ABCMeta):
     def copy(self): ...
 
 
-class TimerRegistry(Registry):
-    """Registry for tracking methods decorated with @timer.
+class ScheduleRegistry(Registry):
+    """Registry for tracking methods decorated with @schedule.
 
-    Maps method names to their timer configuration details.
+    Maps method names to their schedule configuration details.
     """
     def __init__(self):
-        self._registry: Dict[str, TimerDetail] = dict()
+        self._registry: Dict[str, ScheduleDetail] = dict()
 
-    def register(self, timer_detail: TimerDetail, method_name: str):
-        self._registry[method_name] = timer_detail
+    def register(self, schedule_detail: ScheduleDetail, method_name: str):
+        self._registry[method_name] = schedule_detail
 
     def items(self):
         return self._registry.items()
@@ -109,14 +109,14 @@ class Meta(ABCMeta):
     """Metaclass that automatically discovers and registers decorated methods.
 
     This metaclass inspects class methods at definition time to find methods
-    decorated with @timer, @task, or @on_event, and registers them in the
+    decorated with @schedule, @task, or @on_event, and registers them in the
     appropriate registries for automatic execution.
     """
     def __new__(mcs, name, bases, kwargs):
         if not (event_registry := mcs.get_registry_from_base(bases, '__event_registry__')):
             event_registry = EventRegistry()
-        if not (timer_registry := mcs.get_registry_from_base(bases, '__timer_registry__')):
-            timer_registry = TimerRegistry()
+        if not (schedule_registry := mcs.get_registry_from_base(bases, '__schedule_registry__')):
+            schedule_registry = ScheduleRegistry()
         if not (run_forever_registry := mcs.get_registry_from_base(bases, '__run_forever_registry__')):
             run_forever_registry = []
 
@@ -132,13 +132,13 @@ class Meta(ABCMeta):
                         args0_type = typing.get_args(annotation)[0]
                         if issubclass(args0_type, Event):
                             event_registry.register(args0_type, method_name)
-            if timer_detail := getattr(method, '__timer__', None):
-                timer_registry.register(timer_detail, method_name)
+            if schedule_detail := getattr(method, '__schedule__', None):
+                schedule_registry.register(schedule_detail, method_name)
             if getattr(method, '__background_task__', None):
                 run_forever_registry.append(method_name)
 
         kwargs['__event_registry__'] = event_registry
-        kwargs['__timer_registry__'] = timer_registry
+        kwargs['__schedule_registry__'] = schedule_registry
         kwargs['__run_forever_registry__'] = run_forever_registry
         return super().__new__(mcs, name, bases, kwargs)
 
@@ -185,19 +185,19 @@ class ThreadWebApplication:
 class Application(metaclass=Meta):
     """Base class for creating event-driven applications.
 
-    Subclass this to create your application, using decorators like @timer,
+    Subclass this to create your application, using decorators like @schedule,
     @task, and @on_event to define behavior. The metaclass automatically
     discovers and registers decorated methods.
 
     Attributes:
         engine: The AppEngine managing this application
         __event_registry__: Registry of event handlers (managed by metaclass)
-        __timer_registry__: Registry of timer tasks (managed by metaclass)
+        __schedule_registry__: Registry of schedule tasks (managed by metaclass)
         __run_forever_registry__: Registry of background tasks (managed by metaclass)
 
     Example:
         class MyApp(Application):
-            @timer(interval=5.0)
+            @schedule(interval=5.0)
             async def periodic_task(self):
                 print("Running every 5 seconds")
 
@@ -207,7 +207,7 @@ class Application(metaclass=Meta):
                     print(f"Got event: {event.data}")
     """
     __event_registry__: Optional[EventRegistry] = None
-    __timer_registry__: Optional[TimerRegistry] = None
+    __schedule_registry__: Optional[ScheduleRegistry] = None
     __run_forever_registry__: Optional[List] = None
 
     def __init__(self):
@@ -247,8 +247,8 @@ class Application(metaclass=Meta):
         return cls.__run_forever_registry__
 
     @classmethod
-    def get_timer_registry(cls) -> Optional[TimerRegistry]:
-        return cls.__timer_registry__
+    def get_schedule_registry(cls) -> Optional[ScheduleRegistry]:
+        return cls.__schedule_registry__
 
     @classmethod
     def get_app_name(cls):
@@ -258,7 +258,7 @@ class Application(metaclass=Meta):
 class _AppRunner:
     """Internal helper class that manages the lifecycle of an Application.
 
-    Responsible for building and executing timer tasks, background tasks,
+    Responsible for building and executing schedule tasks, background tasks,
     and registering event handlers. Not intended for direct use.
 
     Attributes:
@@ -272,33 +272,33 @@ class _AppRunner:
         self._tasks: Set = set()
 
     @classmethod
-    async def build_timer(cls, name: str, timer_detail: TimerDetail, callback: Callable):
+    async def build_schedule_task(cls, name: str, schedule_detail: ScheduleDetail, callback: Callable):
 
         async def call():
             if inspect.iscoroutinefunction(callback):
                 await callback()
             else:
                 loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, callback)
+                await loop.run_in_executor(None, callback, [])
 
         try:
-            if timer_detail.run_at_once:
+            if schedule_detail.run_at_once:
                 await call()
             while True:
-                await asyncio.sleep(timer_detail.interval)
+                await asyncio.sleep(schedule_detail.interval)
                 await call()
         except asyncio.CancelledError:
-            logger.warning(f"msg=timer task `{name}` was canceled.")
+            logger.warning(f"msg=schedule task `{name}` was canceled.")
         except Exception as e:
             logger.exception(e)
 
     def build_schedule_tasks(self):
         tasks = []
-        if timer_registry := self._app.get_timer_registry():
-            for method_name, timer_detail in timer_registry.items():
+        if schedule_registry := self._app.get_schedule_registry():
+            for method_name, schedule_detail in schedule_registry.items():
                 method = getattr(self._app, method_name)
-                task_name = f'{self._app.get_app_name()}.{method_name}.timer({timer_detail.interval})'
-                task = self.build_timer(name=task_name, timer_detail=timer_detail, callback=method)
+                task_name = f'{self._app.get_app_name()}.{method_name}.schedule({schedule_detail.interval})'
+                task = self.build_schedule_task(name=task_name, schedule_detail=schedule_detail, callback=method)
                 tasks.append(task)
         return tasks
 

@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime
 from event_flow.core.application import Application, AppEngine
 from event_flow.core.event import Event
-from event_flow.core.decorators import on_event, timer, task
+from event_flow.core.decorators import on_event, schedule, task
 
 
 # Define events for inter-app communication
@@ -45,7 +45,7 @@ class APIApp(Application):
     async def before_start(self):
         print("[APIApp] Starting API service...")
 
-    @timer(interval=3, run_at_once=True)
+    @schedule(interval=3, run_at_once=True)
     async def simulate_incoming_orders(self):
         """Simulate receiving orders from external API"""
         self.orders_received += 1
@@ -136,7 +136,7 @@ class InventoryApp(Application):
                         "level": self.inventory[product]
                     }))
 
-    @timer(interval=10, run_at_once=False)
+    @schedule(interval=10, run_at_once=False)
     async def inventory_report(self):
         """Periodic inventory status report"""
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -193,7 +193,7 @@ class MonitorApp(Application):
     async def before_start(self):
         print("[MonitorApp] Starting monitoring service...")
 
-    @timer(interval=8, run_at_once=False)
+    @schedule(interval=8, run_at_once=False)
     async def health_check(self):
         """Periodic health check"""
         self.health_checks += 1
