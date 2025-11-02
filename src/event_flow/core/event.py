@@ -24,6 +24,7 @@ class Event:
         data: The primary data payload of the event
         meta: Additional metadata dictionary for the event
     """
+
     def __init__(self, data: Any):
         self._data: Any = data
         self._meta = {}
@@ -66,6 +67,7 @@ class EventWithSource(Event):
         data: The event data payload
         meta: Event metadata dictionary
     """
+
     def __init__(self, source, data):
         super().__init__(data)
         self._source = source
@@ -85,6 +87,7 @@ class ExceptionEvent(Event):
         traceback_str: String representation of the exception traceback
         meta: Event metadata dictionary
     """
+
     def __init__(self, exception, traceback_str):
         super().__init__(exception)
         self.traceback_str = traceback_str
@@ -102,9 +105,10 @@ class _EventEngine:
         _tasks: Set of running event handler tasks
         _handlers: Mapping of event types to their handler functions
     """
+
     def __init__(self):
         self._active: bool = False
-        self._queue: Optional[Queue] = None
+        self._queue: Optional[Queue] = Queue(10)
         self._tasks: Set = set()
         self._handlers: Dict[Type[Event], List[Callable]] = defaultdict(list)
 
@@ -136,32 +140,32 @@ class _EventEngine:
         Runs continuously while active, batching events of the same type
         when possible for efficient processing.
         """
-        self._queue = Queue(maxsize=10)
-        if self._active:
-            logger.info('EventEngine is already up and running.')
-            return
         self._active = True
+        events: Dict[Type[Event], List[Event]] = defaultdict(list)
         while self._active:
             if self._queue.empty():
                 event: Event = await self._queue.get()
-                self.process_event([event])
+                self._process_event(event.__class__, [event])
             else:
-                events: Dict[Type[Event], List[Event]] = defaultdict(list)
+                events.clear()
                 qsize = self._queue.qsize()
                 for _ in range(qsize):
                     event = await self._queue.get()
                     events[event.__class__].append(event)
-                for each in events.values():
-                    self.process_event(each)
 
-    def process_event(self, event: List[Event]):
+                for event_type, event_list in events.items():
+                    self._process_event(event_type, event_list)
+
+    def _process_event(self, event_type: Type[Event], event: List[Event]):
         """Process a batch of events by invoking their registered handlers.
 
         Args:
             event: List of Event instances of the same type to process
         """
-        if handlers := self._handlers[event[0].__class__]:
+        if handlers := self._handlers.get(event_type, []):
             for handler in handlers:
                 t = asyncio.create_task(handler(event))
                 self._tasks.add(t)
                 t.add_done_callback(self._tasks.discard)
+        else:
+            logger.warning("No handlers registered for event type: {}", event_type)

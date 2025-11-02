@@ -235,6 +235,9 @@ class Application(metaclass=Meta):
     def set_engine(self, engine: "AppEngine"):
         self.engine = engine
 
+    def register_handler(self):
+        self._app_runner.register_handler()
+
     @classmethod
     def get_event_registry(cls) -> Optional[EventRegistry]:
         return cls.__event_registry__
@@ -330,7 +333,6 @@ class _AppRunner:
         return self.build_schedule_tasks() + self.build_background_tasks()
 
     async def start(self):
-        self.register_handler()
         try:
             await asyncio.gather(*self.build_before_start_tasks())
             await asyncio.gather(*self.get_all_tasks())
@@ -386,6 +388,7 @@ class AppEngine:
         """
         for each in app:
             each.set_engine(self)
+            each.register_handler()
             self._apps.append(each)
 
     def register_handler(self, event_type: Type[Event], *handler: Callable):

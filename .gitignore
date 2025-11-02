@@ -11,3 +11,4 @@ wheels/
 uv.lock
 .idea/*
 .claude/*
+local/*

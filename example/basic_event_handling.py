@@ -1,130 +1,100 @@
 """
 Basic Event Handling Example
 
-This example demonstrates the three different ways to declare event handlers
-in Event Flow:
-1. Using @on_event decorator
-2. Using naming convention (on_* methods with type hints)
-3. Combining both for flexibility
+This example demonstrates:
+1. Different ways to declare event handlers
+2. How to receive socket data in a background loop
+3. How to publish events from within Application instances using self.engine.pub_event()
+4. How events flow through the system
 """
 
 import asyncio
+from datetime import datetime
+from typing import List
+
 from event_flow.core.application import Application, AppEngine
 from event_flow.core.event import Event
-from event_flow.core.decorators import on_event
 
 
 # Define custom events
-class UserCreatedEvent(Event):
-    """Event triggered when a new user is created"""
-    pass
-
-
-class UserLoginEvent(Event):
-    """Event triggered when a user logs in"""
+class SocketDataEvent(Event):
+    """Event emitted when data is received from a socket"""
     pass
 
 
 class OrderPlacedEvent(Event):
-    """Event triggered when an order is placed"""
+    """Event emitted when an order is placed"""
     pass
 
 
-class MyApp(Application):
-    """
-    Example application showing different ways to handle events
-    """
+class EventProcessorApp(Application):
 
-    # Method 1: Using @on_event decorator
-    @on_event(UserCreatedEvent)
-    async def handle_user_created(self, events: list[UserCreatedEvent]):
+    # Using naming convention (method starts with 'on_')
+    async def on_socket_data(self, events: List[SocketDataEvent]):
         """
-        Handler using explicit decorator.
-        Note: Events are passed as a list for batch processing.
+        Handle socket data events using explicit decorator.
+
+        This demonstrates how events published from the socket listener
+        are received and processed by other applications.
         """
-        print(f"\n[Decorator Handler] Processing {len(events)} UserCreatedEvent(s)")
         for event in events:
-            user_data = event.data
-            print(f"  - User created: {user_data}")
+            timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            print(f"[{timestamp}] [Processor] SocketDataEvent From: {event.data['address']}")
+            print(f"[{timestamp}] [Processor] SocketDataEvent Message: {event.data['message']}")
 
-    # Method 2: Using naming convention with type hints
-    # The framework automatically detects methods starting with "on_"
-    # and registers them based on the type hint
-    async def on_user_login(self, events: list[UserLoginEvent]):
-        """
-        Handler using naming convention (on_* + type hint).
-        Automatically registered for UserLoginEvent.
-        """
-        print(f"\n[Convention Handler] Processing {len(events)} UserLoginEvent(s)")
-        for event in events:
-            login_data = event.data
-            print(f"  - User logged in: {login_data}")
-
-    # Method 3: Custom method name with decorator
-    @on_event(OrderPlacedEvent)
-    async def process_new_order(self, events: list[OrderPlacedEvent]):
-        """
-        Custom method name using decorator.
-        Useful when you want descriptive method names.
-        """
-        print(f"\n[Custom Handler] Processing {len(events)} OrderPlacedEvent(s)")
-        for event in events:
-            order_data = event.data
-            print(f"  - Order placed: {order_data}")
+    async def on_orders(self, events: List[OrderPlacedEvent]):  # noqa
+        """Handle order events - demonstrates batch processing"""
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        for each in events:
+            print(f"[{timestamp}] [Processor] Processed OrderPlacedEvent {each}")
 
 
-async def main():
+def main():
     """
-    Main function to demonstrate event handling
+    Main function demonstrating the complete event flow
     """
-    print("=" * 60)
-    print("Basic Event Handling Example")
-    print("=" * 60)
-
-    # Create and configure the engine
+    # Create the engine
     engine = AppEngine()
-    app = MyApp()
-    engine.add_app(app)
 
-    # Publish some events
-    print("\n--- Publishing Events ---")
+    # Add applications
+    processor_app = EventProcessorApp()
 
-    # Single user created event
-    await engine.pub_event(UserCreatedEvent({
-        "user_id": 123,
-        "username": "alice",
-        "email": "alice@example.com"
-    }))
+    engine.add_app(processor_app)
 
-    # Multiple user login events (will be batched)
-    await engine.pub_event(UserLoginEvent({
-        "user_id": 123,
-        "username": "alice",
-        "timestamp": "2024-10-29T10:00:00"
-    }))
-    await engine.pub_event(UserLoginEvent({
-        "user_id": 456,
-        "username": "bob",
-        "timestamp": "2024-10-29T10:05:00"
-    }))
+    @engine.before_start
+    async def simulate_external_events():
+        """
+        Simulate events being published from external sources.
 
-    # Order events
-    await engine.pub_event(OrderPlacedEvent({
-        "order_id": "ORD-001",
-        "user_id": 123,
-        "total": 99.99
-    }))
+        In a real application, these might come from:
+        - HTTP API endpoints
+        - Message queues (RabbitMQ, Kafka, etc.)
+        - Webhooks
+        - Database triggers
+        - etc.
+        """
+        await asyncio.sleep(3)  # Wait for the app to start
 
-    # Give time for events to be processed
-    await asyncio.sleep(0.5)
+        print("\n" + "=" * 60)
+        print("Simulating external events...")
+        print("=" * 60 + "\n")
 
-    print("\n" + "=" * 60)
-    print("Example completed!")
-    print("=" * 60)
-    await engine.run()
+        # User creation event
+        await engine.pub_event(SocketDataEvent({
+            "address": "192.168.1.31",
+            "message": "hi Alice",
+        }))
+
+        await asyncio.sleep(0.5)
+
+        # Multiple user login events (will be batched)
+        await engine.pub_event(OrderPlacedEvent({
+            "symbol": "BTCUSDT",
+            "price": "120000",
+        }))
+
+    engine.start()
 
 
 if __name__ == "__main__":
-    # For demonstration purposes, we'll run the async main function
-    # In production, you would typically call engine.start()
-    asyncio.run(main())
+    main()
