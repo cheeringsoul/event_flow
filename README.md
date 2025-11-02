@@ -9,7 +9,7 @@ Event Flow is a modern Python framework that embraces event-driven architecture 
 ## Key Features
 
 - **Event-Driven Architecture**: Built on asyncio with efficient queue-based event processing
-- **Declarative API**: Use decorators to define event handlers, timers, and background tasks
+- **Declarative API**: Use decorators to define event handlers, schedule tasks, and background tasks
 - **Automatic Registration**: Metaclass-based automatic discovery and registration of handlers
 - **Batch Processing**: Events are automatically grouped by type for efficient batch handling
 - **Flexible Handler Declaration**: Multiple ways to declare event handlers
@@ -83,7 +83,7 @@ async def publish_events():
 engine.start()
 ```
 
-### Timer-Based Tasks
+### Schedule Tasks
 
 Execute tasks periodically with the `@timer` decorator:
 
@@ -286,7 +286,7 @@ class MyApp(Application):
             )
 ```
 
-Any Application or SubApplication instance has access to `self.engine`, allowing you to publish events from within event handlers, timers, or background tasks.
+Any Application or SubApplication instance has access to `self.engine`, allowing you to publish events from within event handlers, schedule tasks, or background tasks.
 
 ### Event Handlers
 
@@ -433,7 +433,7 @@ def handle_event(self, events: list[MyEvent]):
 | |App1|          |App2|          |App3|      |
 | +----+          +----+          +----+      |
 |  - Event Handlers                           |
-|  - Timers                                   |
+|  - Schedule Tasks                                   |
 |  - Background Tasks                         |
 |  - Lifecycle Hooks                          |
 +---------------------------------------------+
@@ -462,7 +462,7 @@ Check out the comprehensive examples in the `example/` directory:
 ```bash
 # Run examples directly
 python example/basic_event_handling.py
-python example/timer_tasks.py
+python example/schedule_tasks.py
 python example/background_tasks.py
 python example/lifecycle_hooks.py
 python example/multi_app.py
@@ -476,10 +476,10 @@ python example/multi_app.py
 - Event chaining (OrderPlacedEvent → TradeEvent)
 - Using `@engine.before_start` decorator
 
-**`timer_tasks.py`** - Periodic scheduled tasks
-- Using `@timer` decorator with different intervals
+**`schedule_tasks.py`** - Periodic scheduled tasks
+- Using `@schedule` decorator with different intervals
 - `run_at_once` parameter for immediate execution
-- Both async and sync timer functions
+- Both async and sync schedule functions
 
 **`background_tasks.py`** - Long-running background workers
 - Using `@task` decorator for continuous tasks
