@@ -507,10 +507,6 @@ python example/multi_app.py
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
-
-[License information here]
-
 ## Author
 
-ymy (icheeringsoul@163.com)
+ymy (icheeringsoul@gmail.com, icheeringsoul@163.com)
