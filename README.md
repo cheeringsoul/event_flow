@@ -349,17 +349,71 @@ Events are processed in batches for better performance:
 
 ### Settings
 
-Configure your application using environment variables:
+Event Flow provides a Django-style settings system for managing application configuration.
+
+#### How It Works
+
+The framework automatically loads settings from a Python module. You can specify which module to use via the `EF_SETTINGS_MODULE` environment variable, or it defaults to `settings.py` in your current application directory.
+
+#### Setting Up Configuration
+
+1. **Create a settings file** (e.g., `settings.py`) in your application directory:
+
+```python
+# settings.py
+DATABASE_URL = "postgresql://localhost/mydb"
+REDIS_HOST = "localhost"
+REDIS_PORT = 6379
+API_KEY = "your-api-key"
+DEBUG = True
+MAX_WORKERS = 10
+```
+
+**Note**: All configuration variables must be in UPPERCASE.
+
+2. **Use settings in your code**:
 
 ```python
 from event_flow.settings import settings
 
-# Set environment variable: EF_SETTINGS_MODULE=myapp.settings
-# or create a settings.py module
+class DatabaseApp(Application):
+    async def before_start(self):
+        # Access settings just like Django
+        db_url = settings.DATABASE_URL
+        debug_mode = settings.DEBUG
 
-# Access settings
-database_url = settings.DATABASE_URL
+        self.db = await connect_to_database(db_url)
 ```
+
+#### Custom Settings Module
+
+To use a different settings module, set the `EF_SETTINGS_MODULE` environment variable:
+
+```bash
+# Use myapp.py as settings (note: do not include .py extension)
+export EF_SETTINGS_MODULE=somemodule.myapp
+
+# Run your application
+python main.py
+```
+
+Or set it programmatically before importing settings:
+
+```python
+import os
+os.environ['EF_SETTINGS_MODULE'] = 'somemodule.myapp'  # References somemodule/myapp.py
+
+from event_flow.settings import settings
+```
+
+**Important Notes:**
+- The settings file must be a Python file (`.py`)
+- `EF_SETTINGS_MODULE` should **not** include the `.py` extension
+- Use Python module path notation (e.g., `myapp.config` for `myapp/config.py`)
+
+#### Default Behavior
+
+If `EF_SETTINGS_MODULE` is not set, the framework looks for `settings.py` in your current working directory.
 
 ## Advanced Usage
 
